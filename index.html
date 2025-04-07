@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlueBikes Data Analysis - Boston Bike-sharing Patterns</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-embed@6"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <header>
+        <h1>BlueBikes Data Analysis: Understanding Boston's Bike-sharing Patterns</h1>
+    </header>
+
+    <main>
+        <section class="introduction">
+            <h2>Project Introduction</h2>
+            <p>This project analyzes Boston's BlueBikes bike-sharing system data to understand urban mobility patterns and user behavior. By examining trip data from January 2025, we aim to uncover insights about how different types of users (members vs. casual riders) utilize the system, identify popular routes and stations, and understand temporal patterns in bike usage.</p>
+            
+            <h3>About the Data</h3>
+            <p>The dataset comes from BlueBikes' publicly available system data, containing over 10,000 bike trips from January 2025. Each trip record includes information such as start/end times and locations, user type (member/casual), and trip duration. The data features both categorical (station names, user types) and continuous variables (trip duration, coordinates), making it ideal for diverse analytical approaches.</p>
+            
+            <h3>References</h3>
+            <ul>
+                <li><a href="https://www.bluebikes.com/system-data">BlueBikes System Data</a> - Official source of trip data</li>
+                <li><a href="https://www.boston.gov/departments/boston-bikes/bike-data">Boston Bikes Data</a> - City of Boston's bicycle infrastructure data</li>
+            </ul>
+        </section>
+
+        <section class="temporal-patterns">
+            <h2>Temporal Usage Patterns</h2>
+            <p>Understanding when people use BlueBikes helps optimize system operations and capacity planning.</p>
+            
+            <div class="visualization-container">
+                <div id="hourly-trips"></div>
+                <p class="visualization-explanation">
+                    This line chart shows the overall hourly distribution of bike trips. The clear peaks during morning and evening rush hours indicate that many users rely on BlueBikes for commuting. The visualization uses a simple line chart design to clearly show temporal patterns, with careful color choices for readability.
+                </p>
+            </div>
+
+            <div class="visualization-container">
+                <div id="trips-heatmap"></div>
+                <p class="visualization-explanation">
+                    The heatmap reveals the intensity of bike usage across different days and hours. Darker colors indicate higher trip volumes, helping identify peak usage periods. The design uses a sequential color scheme to effectively show intensity variations.
+                </p>
+            </div>
+        </section>
+
+        <section class="user-analysis">
+            <h2>User Type Analysis</h2>
+            <p>Comparing usage patterns between members and casual riders reveals different user behaviors and needs.</p>
+            
+            <div class="visualization-container">
+                <div id="member-distribution"></div>
+                <p class="visualization-explanation">
+                    The pie chart shows the proportion of trips made by members versus casual riders. The contrasting colors help distinguish between user types, while the simple design makes the comparison immediately clear.
+                </p>
+            </div>
+
+            <div class="visualization-container">
+                <div id="daily-usage-altair"></div>
+                <p class="visualization-explanation">
+                    This interactive visualization breaks down hourly usage patterns by day and user type. The faceted design allows for easy comparison across days, while the interactive highlighting helps focus on specific user types. The consistent color scheme maintains visual coherence with other charts.
+                </p>
+            </div>
+        </section>
+
+        <section class="spatial-analysis">
+            <h2>Spatial Distribution and Routes</h2>
+            <p>Understanding station popularity and common travel patterns helps inform system expansion and rebalancing efforts.</p>
+            
+            <div class="visualization-container">
+                <div id="station-map" style="height: 500px;"></div>
+                <p class="visualization-explanation">
+                    Interactive map reveals concentration of popular stations around MIT, Kendall Square, and Central Square areas, indicating high demand in these tech and education hubs. The map uses circle size to represent station popularity and includes interactive tooltips for detailed information.
+                </p>
+            </div>
+
+            <div class="visualization-container">
+                <div id="station-popularity"></div>
+                <p class="visualization-explanation">
+                    Bar chart of the most popular starting stations helps identify key locations in the system. The horizontal layout accommodates station names clearly, while the color gradient adds visual interest and helps distinguish between stations.
+                </p>
+            </div>
+
+            <div class="visualization-container">
+                <div id="popular-routes"></div>
+                <p class="visualization-explanation">
+                    This visualization shows the most frequently traveled routes, with color indicating average trip duration. The combination of route frequency and duration provides insights into both popular connections and typical journey times.
+                </p>
+            </div>
+        </section>
+
+        <section class="conclusions">
+            <h2>Key Findings and Future Work</h2>
+            <h3>Main Conclusions</h3>
+            <ol>
+                <li>Usage patterns strongly suggest that BlueBikes serves a significant commuter population, with clear peaks during rush hours on weekdays.</li>
+                <li>There's a notable concentration of activity around educational and business districts, particularly near MIT and Kendall Square, indicating strong integration with these institutional areas.</li>
+                <li>Members and casual riders show distinct usage patterns, with members more likely to use the system for regular commuting while casual riders show more weekend and leisure-oriented usage.</li>
+            </ol>
+
+            <h3>Future Work</h3>
+            <p>Future analysis could explore:</p>
+            <ul>
+                <li>Seasonal variations in usage patterns by analyzing data across different months</li>
+                <li>Impact of weather conditions on ridership</li>
+                <li>Relationship between station popularity and nearby points of interest or transit connections</li>
+            </ul>
+        </section>
+    </main>
+
+    <footer>
+        <p>Data visualization project for DS4200 - Information Visualization</p>
+    </footer>
+
+    <script src="static/data.js"></script>
+    <script src="static/script.js"></script>
+    <script>
+        // Initialize visualizations with the data from data.js
+        initializeVisualizations(visualizationData);
+    </script>
+</body>
+</html> 
