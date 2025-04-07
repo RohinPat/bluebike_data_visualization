@@ -6,7 +6,33 @@ function initializeVisualizations(data) {
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    // Configure default layout options
+    // Create Altair visualizations
+    const altairCharts = [
+        {
+            id: 'hourly-trips',
+            spec: data.hourly_trips
+        },
+        {
+            id: 'daily-usage-altair',
+            spec: data.daily_usage_altair
+        }
+    ];
+
+    // Create each Altair chart
+    altairCharts.forEach(chart => {
+        if (document.getElementById(chart.id)) {
+            vegaEmbed(`#${chart.id}`, chart.spec, {
+                actions: false,
+                theme: 'light'
+            }).catch(error => {
+                console.error(`Error creating Altair plot:`, error);
+                document.getElementById(chart.id).innerHTML = 
+                    '<p style="color: red;">Error loading visualization</p>';
+            });
+        }
+    });
+
+    // Configure default layout options for Plotly charts
     const defaultLayout = {
         autosize: true,
         height: 450,
@@ -18,19 +44,9 @@ function initializeVisualizations(data) {
     // Create Plotly visualizations
     const plotlyCharts = [
         {
-            id: 'hourly-trips',
-            data: data.hourly_trips.data,
-            layout: { ...defaultLayout, ...data.hourly_trips.layout }
-        },
-        {
             id: 'trips-heatmap',
             data: data.heatmap.data,
             layout: { ...defaultLayout, ...data.heatmap.layout }
-        },
-        {
-            id: 'member-distribution',
-            data: data.member_distribution.data,
-            layout: { ...defaultLayout, ...data.member_distribution.layout }
         },
         {
             id: 'station-popularity',
@@ -58,18 +74,6 @@ function initializeVisualizations(data) {
             });
         }
     });
-
-    // Create Altair visualization
-    if (document.getElementById('daily-usage-altair')) {
-        vegaEmbed('#daily-usage-altair', data.daily_usage_altair, {
-            actions: false,
-            theme: 'light'
-        }).catch(error => {
-            console.error('Error creating Altair plot:', error);
-            document.getElementById('daily-usage-altair').innerHTML = 
-                '<p style="color: red;">Error loading visualization</p>';
-        });
-    }
 
     // Add station markers to the map
     if (data.d3_station_data) {
@@ -101,8 +105,7 @@ function initializeVisualizations(data) {
 
 // Handle responsive resizing
 window.addEventListener('resize', () => {
-    const plotlyCharts = ['hourly-trips', 'trips-heatmap', 'member-distribution', 
-                         'station-popularity', 'popular-routes'];
+    const plotlyCharts = ['trips-heatmap', 'station-popularity', 'popular-routes'];
     plotlyCharts.forEach(id => {
         const container = document.getElementById(id);
         if (container) {

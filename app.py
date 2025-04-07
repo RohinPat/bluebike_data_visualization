@@ -9,25 +9,50 @@ import altair as alt
 app = Flask(__name__)
 
 def load_and_process_data():
+    # Load the data
     df = pd.read_csv('202501-bluebikes-tripdata.csv')
+    
+    # Convert timestamps
     df['started_at'] = pd.to_datetime(df['started_at'])
     df['ended_at'] = pd.to_datetime(df['ended_at'])
+    
+    # Calculate trip duration
     df['duration_minutes'] = (df['ended_at'] - df['started_at']).dt.total_seconds() / 60
     
+    # Basic data cleaning
     df_clean = df[
-        (df['duration_minutes'] > 1) &
-        (df['duration_minutes'] < 180) &
-        (df['member_casual'].isin(['member', 'casual']))
+        (df['duration_minutes'] >= 1) &  # Trips at least 1 minute long
+        (df['duration_minutes'] <= 180) &  # Trips no longer than 3 hours
+        (df['member_casual'].isin(['member', 'casual'])) &  # Valid user types
+        (df['start_station_name'].notna()) &  # Valid station names
+        (df['end_station_name'].notna()) &
+        (df['start_lat'].notna()) &  # Valid coordinates
+        (df['start_lng'].notna()) &
+        (df['end_lat'].notna()) &
+        (df['end_lng'].notna())
     ].copy()
     
-    if len(df_clean) > 10000:
-        df_clean = df_clean.sample(n=10000, random_state=42)
-    
+    # Extract hour and day
     df_clean['hour'] = df_clean['started_at'].dt.hour
     df_clean['day_of_week'] = df_clean['started_at'].dt.day_name()
     
+    # Create day order
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     df_clean['day_of_week'] = pd.Categorical(df_clean['day_of_week'], categories=day_order, ordered=True)
+    
+    # Sample data if more than 10000 entries
+    if len(df_clean) > 10000:
+        # Stratified sampling to maintain distribution across days and user types
+        df_clean = df_clean.groupby(['day_of_week', 'member_casual'], group_keys=False).apply(
+            lambda x: x.sample(n=max(1, int(10000 * len(x) / len(df_clean))))
+        )
+    
+    # Print data info for verification
+    print(f"\nTotal entries after cleaning and sampling: {len(df_clean)}")
+    print("\nDistribution of trips by user type:")
+    print(df_clean['member_casual'].value_counts())
+    print("\nDistribution of trips by day:")
+    print(df_clean['day_of_week'].value_counts().sort_index())
     
     return df_clean
 
@@ -143,154 +168,160 @@ def generate_altair_daily_usage(df):
     return chart.to_dict()
 
 def generate_visualizations(df):
-    hourly_trips = df.groupby(['hour', 'member_casual'], observed=True).size().reset_index(name='trips')
-    fig1 = px.line(hourly_trips, x='hour', y='trips',
-                  title='Bike Trips by Hour of Day',
-                  labels={'hour': 'Hour of Day', 'trips': 'Number of Trips'})
-    fig1.update_layout(
-        xaxis_title="Hour of Day",
-        yaxis_title="Number of Trips",
-        hovermode='x',
-        plot_bgcolor='rgba(248,249,250,1)',
-        paper_bgcolor='rgba(248,249,250,1)',
-        xaxis=dict(gridcolor='rgba(0,0,0,0.1)', tickmode='linear', dtick=1),
-        yaxis=dict(gridcolor='rgba(0,0,0,0.1)')
-    )
+    # Create hourly trips visualization using Altair - now with combined totals
+    hourly_data = (df.groupby(['hour'], observed=True)
+                    .size()
+                    .reset_index(name='trips')
+                    .sort_values('hour'))  # Ensure hours are in order
     
+    # Create the base chart for total trips
+    base = alt.Chart(hourly_data).encode(
+        x=alt.X('hour:Q', 
+                axis=alt.Axis(title='Hour of Day'),
+                scale=alt.Scale(domain=[0, 23])),
+        y=alt.Y('trips:Q',
+                axis=alt.Axis(title='Total Number of Trips')),
+        tooltip=['hour:Q', 'trips:Q']
+    ).properties(
+        width=800,
+        height=400,
+        title=alt.TitleParams(
+            'Total Bike Trips by Hour of Day',
+            fontSize=20,
+            anchor='middle'
+        )
+    )
+
+    # Create a layered chart with both lines and points
+    hourly_viz = alt.layer(
+        base.mark_line(
+            interpolate='monotone',
+            size=3,
+            color='#4C78A8'  # Use a consistent blue color
+        ),
+        base.mark_circle(
+            size=50,
+            opacity=0.5,
+            color='#4C78A8'
+        )
+    ).configure_view(
+        strokeWidth=0
+    ).configure_axis(
+        grid=True,
+        gridColor='#EEEEEE'
+    ).configure_title(
+        offset=20
+    )
+
+    # Convert Altair chart to dict for JSON serialization
+    hourly_trips_dict = hourly_viz.to_dict()
+
+    # Create heatmap visualization
     pivot_trips = df.pivot_table(
         index='day_of_week',
         columns='hour',
         values='duration_minutes',
-        aggfunc='count'
-    )
-    
-    fig_heatmap = px.imshow(
+        aggfunc='count',
+        observed=True
+    ).fillna(0)  # Fill any missing hour combinations with 0
+
+    # Create heatmap using Plotly
+    heatmap = px.imshow(
         pivot_trips,
-        title='Trip Counts by Day and Hour',
         labels=dict(x='Hour of Day', y='Day of Week', color='Number of Trips'),
-        color_continuous_scale='YlGnBu',
-        aspect='auto'
+        title='Trip Distribution by Day and Hour',
+        color_continuous_scale='YlOrRd'
     )
-    
-    fig_heatmap.update_layout(
-        xaxis_title="Hour of Day",
-        yaxis_title="Day of Week",
+    heatmap.update_layout(
+        xaxis_title='Hour of Day',
+        yaxis_title='Day of Week',
         xaxis=dict(
+            constrain='domain',
+            scaleanchor=None,
             tickmode='linear',
             tick0=0,
             dtick=1,
             ticktext=list(range(24)),
             tickvals=list(range(24))
         ),
-        plot_bgcolor='rgba(248,249,250,1)',
-        paper_bgcolor='rgba(248,249,250,1)',
-        height=450,
-        margin=dict(t=50, r=30, b=80, l=100)
+        yaxis=dict(
+            constrain='domain',
+            scaleanchor=None,
+            categoryorder='array',
+            categoryarray=['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        )
     )
+
+    # Get top 10 popular starting stations
+    top_stations = df['start_station_name'].value_counts().head(10)
+    top_stations.index = top_stations.index.map(clean_station_name)
     
-    station_counts = df['start_station_name'].value_counts().head(10)
-    station_df = pd.DataFrame({
-        'station': station_counts.index.map(clean_station_name),
-        'trips': station_counts.values
-    })
-    
-    fig2 = px.bar(station_df,
-                  x='trips',
-                  y='station',
-                  orientation='h',
-                  title='Top 10 Most Popular Starting Stations',
-                  labels={'trips': 'Number of Trips', 'station': 'Station Name'},
-                  color='trips',
-                  color_continuous_scale='Blues')
-    
-    fig2.update_layout(
-        title={
-            'text': 'Top 10 Most Popular Starting Stations',
-            'y': 0.95,
-            'x': 0.5,
-            'xanchor': 'center',
-            'yanchor': 'top',
-            'font': dict(size=20)
-        },
-        yaxis_title="",
-        xaxis_title="Number of Trips",
-        plot_bgcolor='rgba(248,249,250,1)',
-        paper_bgcolor='rgba(248,249,250,1)',
-        xaxis=dict(gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=14), tickfont=dict(size=12)),
-        yaxis=dict(gridcolor='rgba(0,0,0,0.1)', automargin=True, tickfont=dict(size=12)),
-        margin=dict(l=20, r=20, t=100, b=50),
-        showlegend=False,
-        coloraxis_showscale=False
+    # Create bar chart for station popularity
+    station_bar = px.bar(
+        x=top_stations.values,
+        y=top_stations.index,
+        orientation='h',
+        title='Top 10 Most Popular Starting Stations',
+        labels={'x': 'Number of Trips', 'y': 'Station Name'}
     )
-    
-    member_dist = df['member_casual'].value_counts()
-    fig3 = px.pie(values=member_dist.values, names=member_dist.index,
-                 title='Distribution of Member vs Casual Riders',
-                 color_discrete_sequence=['#4C78A8', '#F58518'])
-    fig3.update_traces(textinfo='percent+label')
-    
-    route_counts = df.groupby(['start_station_name', 'end_station_name']).size().reset_index(name='count')
-    route_counts['start_station_clean'] = route_counts['start_station_name'].apply(clean_station_name)
-    route_counts['end_station_clean'] = route_counts['end_station_name'].apply(clean_station_name)
-    route_counts['route'] = route_counts['start_station_clean'] + ' → ' + route_counts['end_station_clean']
-    
-    top_routes = route_counts.nlargest(10, 'count')
-    route_durations = df.groupby(['start_station_name', 'end_station_name'])['duration_minutes'].mean().reset_index()
-    route_durations['route'] = route_durations['start_station_name'].apply(clean_station_name) + ' → ' + \
-                              route_durations['end_station_name'].apply(clean_station_name)
-    
-    top_routes = top_routes.merge(route_durations[['route', 'duration_minutes']], on='route', how='left')
-    
-    fig4 = px.bar(top_routes,
-                  x='count',
-                  y='route',
-                  orientation='h',
-                  title='Most Popular Bike Routes',
-                  labels={'count': 'Number of Trips', 
-                         'route': 'Route',
-                         'duration_minutes': 'Avg Duration (min)'},
-                  color='duration_minutes',
-                  color_continuous_scale='RdYlBu_r',
-                  height=400)
-    
-    fig4.update_layout(
-        title={
-            'text': 'Most Popular Bike Routes',
-            'y': 0.98,
-            'x': 0.5,
-            'xanchor': 'center',
-            'yanchor': 'top',
-            'font': dict(size=20)
-        },
-        yaxis_title="",
-        xaxis_title="Number of Trips",
-        plot_bgcolor='rgba(248,249,250,1)',
-        paper_bgcolor='rgba(248,249,250,1)',
-        xaxis=dict(gridcolor='rgba(0,0,0,0.1)', title_font=dict(size=12), tickfont=dict(size=10)),
-        yaxis=dict(gridcolor='rgba(0,0,0,0.1)', automargin=True, tickfont=dict(size=10)),
-        coloraxis=dict(
-            colorbar=dict(
-                title="Duration<br>(min)",
-                titlefont=dict(size=10),
-                tickfont=dict(size=9),
-                len=0.8
-            )
+    station_bar.update_layout(
+        xaxis=dict(
+            constrain='domain',
+            scaleanchor=None
         ),
-        margin=dict(l=10, r=50, t=80, b=30),
-        showlegend=False
+        yaxis=dict(
+            constrain='domain',
+            scaleanchor=None,
+            autorange='reversed'  # Show most popular at top
+        )
     )
+
+    # Analyze popular routes
+    route_counts = df.groupby(['start_station_name', 'end_station_name'])['duration_minutes'].agg(['count', 'mean']).reset_index()
+    top_routes = route_counts.nlargest(10, 'count')
     
-    altair_chart = generate_altair_daily_usage(df)
-    d3_data = generate_d3_station_data(df)
+    # Clean station names for routes
+    top_routes['start_station_name'] = top_routes['start_station_name'].apply(clean_station_name)
+    top_routes['end_station_name'] = top_routes['end_station_name'].apply(clean_station_name)
+    top_routes['route'] = top_routes['start_station_name'] + ' → ' + top_routes['end_station_name']
     
+    # Create bar chart for popular routes
+    routes_bar = px.bar(
+        top_routes,
+        x='count',
+        y='route',
+        orientation='h',
+        title='Most Popular Bike Routes',
+        labels={'count': 'Number of Trips', 'route': 'Route', 'mean': 'Average Duration (min)'},
+        color='mean',
+        color_continuous_scale='Viridis'
+    )
+    routes_bar.update_layout(
+        xaxis=dict(
+            constrain='domain',
+            scaleanchor=None
+        ),
+        yaxis=dict(
+            constrain='domain',
+            scaleanchor=None,
+            autorange='reversed'  # Show most popular at top
+        )
+    )
+
+    # Generate D3 station data
+    d3_station_data = generate_d3_station_data(df)
+
+    # Generate daily usage Altair visualization
+    daily_usage_altair = generate_altair_daily_usage(df)
+
+    # Return all visualizations
     return {
-        'hourly_trips': json.loads(fig1.to_json()),
-        'station_popularity': json.loads(fig2.to_json()),
-        'member_distribution': json.loads(fig3.to_json()),
-        'popular_routes': json.loads(fig4.to_json()),
-        'daily_usage_altair': altair_chart,
-        'd3_station_data': d3_data,
-        'heatmap': json.loads(fig_heatmap.to_json())
+        'hourly_trips': hourly_trips_dict,
+        'heatmap': json.loads(heatmap.to_json()),
+        'station_popularity': json.loads(station_bar.to_json()),
+        'popular_routes': json.loads(routes_bar.to_json()),
+        'd3_station_data': d3_station_data,
+        'daily_usage_altair': daily_usage_altair
     }
 
 # Cache for storing processed data
