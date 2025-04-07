@@ -11,7 +11,7 @@
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css">
-    <link rel="stylesheet" href="/bluebike_data_visualization/static/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
     <header>
@@ -113,8 +113,8 @@
         <p>Data visualization project for DS4200 - Information Visualization</p>
     </footer>
 
-    <script src="/bluebike_data_visualization/static/data.js"></script>
-    <script src="/bluebike_data_visualization/static/script.js"></script>
+    <script src="{{ url_for('static', filename='data.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
     <script>
         // Initialize visualizations with the data from data.js
         initializeVisualizations(visualizationData);

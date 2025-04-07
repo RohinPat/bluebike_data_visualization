@@ -33,8 +33,9 @@ def load_and_process_data():
     df_clean['day_of_week'] = pd.Categorical(df_clean['day_of_week'], categories=day_order, ordered=True)
     
     if len(df_clean) > 10000:
-        df_clean = df_clean.groupby(['day_of_week', 'member_casual'], group_keys=False).apply(
-            lambda x: x.sample(n=max(1, int(10000 * len(x) / len(df_clean))))
+        # Keep all columns including the grouping columns
+        df_clean = df_clean.groupby(['day_of_week', 'member_casual'], observed=True, group_keys=False).apply(
+            lambda x: x.sample(n=max(1, int(10000 * len(x) / len(df_clean))), random_state=42)
         )
     
     return df_clean
@@ -306,6 +307,10 @@ def get_cached_visualizations():
 
 @app.route('/')
 def index():
+    return render_template('index.html')
+
+@app.route('/index.html')
+def index_html():
     return render_template('index.html')
 
 @app.route('/data')
