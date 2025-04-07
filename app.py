@@ -9,50 +9,33 @@ import altair as alt
 app = Flask(__name__)
 
 def load_and_process_data():
-    # Load the data
     df = pd.read_csv('202501-bluebikes-tripdata.csv')
-    
-    # Convert timestamps
     df['started_at'] = pd.to_datetime(df['started_at'])
     df['ended_at'] = pd.to_datetime(df['ended_at'])
-    
-    # Calculate trip duration
     df['duration_minutes'] = (df['ended_at'] - df['started_at']).dt.total_seconds() / 60
     
-    # Basic data cleaning
     df_clean = df[
-        (df['duration_minutes'] >= 1) &  # Trips at least 1 minute long
-        (df['duration_minutes'] <= 180) &  # Trips no longer than 3 hours
-        (df['member_casual'].isin(['member', 'casual'])) &  # Valid user types
-        (df['start_station_name'].notna()) &  # Valid station names
+        (df['duration_minutes'] >= 1) &
+        (df['duration_minutes'] <= 180) &
+        (df['member_casual'].isin(['member', 'casual'])) &
+        (df['start_station_name'].notna()) &
         (df['end_station_name'].notna()) &
-        (df['start_lat'].notna()) &  # Valid coordinates
+        (df['start_lat'].notna()) &
         (df['start_lng'].notna()) &
         (df['end_lat'].notna()) &
         (df['end_lng'].notna())
     ].copy()
     
-    # Extract hour and day
     df_clean['hour'] = df_clean['started_at'].dt.hour
     df_clean['day_of_week'] = df_clean['started_at'].dt.day_name()
     
-    # Create day order
     day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
     df_clean['day_of_week'] = pd.Categorical(df_clean['day_of_week'], categories=day_order, ordered=True)
     
-    # Sample data if more than 10000 entries
     if len(df_clean) > 10000:
-        # Stratified sampling to maintain distribution across days and user types
         df_clean = df_clean.groupby(['day_of_week', 'member_casual'], group_keys=False).apply(
             lambda x: x.sample(n=max(1, int(10000 * len(x) / len(df_clean))))
         )
-    
-    # Print data info for verification
-    print(f"\nTotal entries after cleaning and sampling: {len(df_clean)}")
-    print("\nDistribution of trips by user type:")
-    print(df_clean['member_casual'].value_counts())
-    print("\nDistribution of trips by day:")
-    print(df_clean['day_of_week'].value_counts().sort_index())
     
     return df_clean
 
@@ -78,7 +61,6 @@ def clean_station_name(name):
     return name.strip()
 
 def generate_d3_station_data(df):
-    # Only use necessary columns and filter out stations with no coordinates
     station_data = (df[['start_station_name', 'start_lat', 'start_lng']]
         .dropna(subset=['start_lat', 'start_lng'])
         .groupby('start_station_name')
@@ -91,19 +73,16 @@ def generate_d3_station_data(df):
         .reset_index()
     )
     
-    # Clean station names and rename columns
     station_data = station_data.rename(columns={
         'start_station_name': 'name',
         'start_lat': 'lat',
         'start_lng': 'lng'
     })
     
-    # Round coordinates and trips to reduce payload size
     station_data['lat'] = station_data['lat'].round(4)
     station_data['lng'] = station_data['lng'].round(4)
     station_data['trips'] = station_data['trips'].astype(int)
     
-    # Convert to list of dicts for smaller payload
     stations_list = []
     for _, row in station_data.iterrows():
         stations_list.append({
@@ -168,13 +147,11 @@ def generate_altair_daily_usage(df):
     return chart.to_dict()
 
 def generate_visualizations(df):
-    # Create hourly trips visualization using Altair - now with combined totals
     hourly_data = (df.groupby(['hour'], observed=True)
                     .size()
                     .reset_index(name='trips')
-                    .sort_values('hour'))  # Ensure hours are in order
+                    .sort_values('hour'))
     
-    # Create the base chart for total trips
     base = alt.Chart(hourly_data).encode(
         x=alt.X('hour:Q', 
                 axis=alt.Axis(title='Hour of Day'),
@@ -192,12 +169,11 @@ def generate_visualizations(df):
         )
     )
 
-    # Create a layered chart with both lines and points
     hourly_viz = alt.layer(
         base.mark_line(
             interpolate='monotone',
             size=3,
-            color='#4C78A8'  # Use a consistent blue color
+            color='#4C78A8'
         ),
         base.mark_circle(
             size=50,
@@ -213,19 +189,16 @@ def generate_visualizations(df):
         offset=20
     )
 
-    # Convert Altair chart to dict for JSON serialization
     hourly_trips_dict = hourly_viz.to_dict()
 
-    # Create heatmap visualization
     pivot_trips = df.pivot_table(
         index='day_of_week',
         columns='hour',
         values='duration_minutes',
         aggfunc='count',
         observed=True
-    ).fillna(0)  # Fill any missing hour combinations with 0
+    ).fillna(0)
 
-    # Create heatmap using Plotly
     heatmap = px.imshow(
         pivot_trips,
         labels=dict(x='Hour of Day', y='Day of Week', color='Number of Trips'),
@@ -252,11 +225,9 @@ def generate_visualizations(df):
         )
     )
 
-    # Get top 10 popular starting stations
     top_stations = df['start_station_name'].value_counts().head(10)
     top_stations.index = top_stations.index.map(clean_station_name)
     
-    # Create bar chart for station popularity
     station_bar = px.bar(
         x=top_stations.values,
         y=top_stations.index,
@@ -272,20 +243,17 @@ def generate_visualizations(df):
         yaxis=dict(
             constrain='domain',
             scaleanchor=None,
-            autorange='reversed'  # Show most popular at top
+            autorange='reversed'
         )
     )
 
-    # Analyze popular routes
     route_counts = df.groupby(['start_station_name', 'end_station_name'])['duration_minutes'].agg(['count', 'mean']).reset_index()
     top_routes = route_counts.nlargest(10, 'count')
     
-    # Clean station names for routes
     top_routes['start_station_name'] = top_routes['start_station_name'].apply(clean_station_name)
     top_routes['end_station_name'] = top_routes['end_station_name'].apply(clean_station_name)
     top_routes['route'] = top_routes['start_station_name'] + ' → ' + top_routes['end_station_name']
     
-    # Create bar chart for popular routes
     routes_bar = px.bar(
         top_routes,
         x='count',
@@ -304,17 +272,13 @@ def generate_visualizations(df):
         yaxis=dict(
             constrain='domain',
             scaleanchor=None,
-            autorange='reversed'  # Show most popular at top
+            autorange='reversed'
         )
     )
 
-    # Generate D3 station data
     d3_station_data = generate_d3_station_data(df)
-
-    # Generate daily usage Altair visualization
     daily_usage_altair = generate_altair_daily_usage(df)
 
-    # Return all visualizations
     return {
         'hourly_trips': hourly_trips_dict,
         'heatmap': json.loads(heatmap.to_json()),
@@ -324,7 +288,6 @@ def generate_visualizations(df):
         'daily_usage_altair': daily_usage_altair
     }
 
-# Cache for storing processed data
 _cached_data = None
 _cached_visualizations = None
 
@@ -354,6 +317,5 @@ def get_data():
 
 if __name__ == '__main__':
     os.makedirs('static', exist_ok=True)
-    # Pre-load data on startup
     get_cached_visualizations()
     app.run(debug=True) 
