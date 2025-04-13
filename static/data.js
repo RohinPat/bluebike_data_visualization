@@ -5868,226 +5868,224 @@ const visualizationData = {
     }
   ],
   "daily_usage_altair": {
-    "config": {
-      "view": {
-        "continuousWidth": 1000,
-        "continuousHeight": 300,
-        "fill": "#ffffff",
-        "strokeWidth": 0
-      },
-      "facet": {
-        "spacing": 10
-      },
-      "header": {
-        "labelOrient": "bottom",
-        "labelPadding": 10
-      },
-      "legend": {
-        "cornerRadius": 5,
-        "labelFontSize": 11,
-        "offset": 0,
-        "orient": "top",
-        "padding": 10,
-        "titleFontSize": 12
-      }
-    },
-    "data": {
-      "name": "data-a647ef730115f34ef8a549bc13b0ef14"
+  "config": {
+    "view": {
+      "continuousWidth": 1000,
+      "continuousHeight": 300,
+      "fill": "#ffffff",
+      "strokeWidth": 0
     },
     "facet": {
-      "column": {
-        "field": "day_of_week",
-        "header": {
-          "labelColor": "#333333",
-          "labelFontSize": 12,
-          "labelOrient": "top",
-          "labelPadding": 10,
-          "title": null
-        },
-        "sort": [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday"
-        ],
-        "type": "nominal"
-      }
+      "spacing": 10
     },
-    "spec": {
-      "layer": [
-        {
-          "mark": {
-            "type": "line",
-            "size": 2
-          },
-          "encoding": {
-            "color": {
-              "field": "member_casual",
-              "scale": {
-                "domain": [
-                  "member",
-                  "casual"
-                ],
-                "range": [
-                  "#4C78A8",
-                  "#F58518"
-                ]
-              },
-              "title": "User Type",
-              "type": "nominal"
-            },
-            "opacity": {
-              "condition": {
-                "param": "param_1",
-                "value": 1
-              },
-              "value": 0.2
-            },
-            "tooltip": [
-              {
-                "field": "hour",
-                "type": "quantitative"
-              },
-              {
-                "field": "trips",
-                "type": "quantitative"
-              },
-              {
-                "field": "member_casual",
-                "type": "nominal"
-              },
-              {
-                "field": "day_of_week",
-                "type": "nominal"
-              }
-            ],
-            "x": {
-              "axis": {
-                "title": "Hour of Day"
-              },
-              "field": "hour",
-              "scale": {
-                "domain": [
-                  0,
-                  23
-                ]
-              },
-              "type": "quantitative"
-            },
-            "y": {
-              "axis": {
-                "title": "Number of Trips"
-              },
-              "field": "trips",
-              "type": "quantitative"
-            }
-          },
-          "name": "view_1"
+    "header": {
+      "labelOrient": "bottom",
+      "labelPadding": 10
+    },
+    "legend": {
+      "cornerRadius": 5,
+      "labelFontSize": 11,
+      "offset": 0,
+      "orient": "top",
+      "padding": 10,
+      "titleFontSize": 12
+    }
+  },
+  "data": {
+    "name": "data-a647ef730115f34ef8a549bc13b0ef14"
+  },
+  "transform": [
+    {
+      "calculate": "datum.day_of_week === 'Saturday' || datum.day_of_week === 'Sunday' ? 'Weekend' : 'Weekday'",
+      "as": "day_type"
+    }
+  ],
+  "facet": {
+    "column": {
+      "field": "day_type",
+      "header": {
+        "labelColor": "#333333",
+        "labelFontSize": 12,
+        "labelOrient": "top",
+        "labelPadding": 10,
+        "title": null
+      },
+      "sort": ["Weekday", "Weekend"],
+      "type": "nominal"
+    }
+  },
+  "spec": {
+    "layer": [
+      {
+        "mark": {
+          "type": "line",
+          "size": 2
         },
-        {
-          "mark": {
-            "type": "circle",
-            "opacity": 0.5,
-            "size": 30
+        "encoding": {
+          "color": {
+            "field": "member_casual",
+            "scale": {
+              "domain": [
+                "member",
+                "casual"
+              ],
+              "range": [
+                "#4C78A8",
+                "#F58518"
+              ]
+            },
+            "title": "User Type",
+            "type": "nominal"
           },
-          "encoding": {
-            "color": {
-              "field": "member_casual",
-              "scale": {
-                "domain": [
-                  "member",
-                  "casual"
-                ],
-                "range": [
-                  "#4C78A8",
-                  "#F58518"
-                ]
-              },
-              "title": "User Type",
-              "type": "nominal"
+          "opacity": {
+            "condition": {
+              "param": "param_1",
+              "value": 1
             },
-            "opacity": {
-              "condition": {
-                "param": "param_1",
-                "value": 1
-              },
-              "value": 0.2
-            },
-            "tooltip": [
-              {
-                "field": "hour",
-                "type": "quantitative"
-              },
-              {
-                "field": "trips",
-                "type": "quantitative"
-              },
-              {
-                "field": "member_casual",
-                "type": "nominal"
-              },
-              {
-                "field": "day_of_week",
-                "type": "nominal"
-              }
-            ],
-            "x": {
-              "axis": {
-                "title": "Hour of Day"
-              },
+            "value": 0.2
+          },
+          "tooltip": [
+            {
               "field": "hour",
-              "scale": {
-                "domain": [
-                  0,
-                  23
-                ]
-              },
               "type": "quantitative"
             },
-            "y": {
-              "axis": {
-                "title": "Number of Trips"
-              },
+            {
               "field": "trips",
               "type": "quantitative"
+            },
+            {
+              "field": "member_casual",
+              "type": "nominal"
+            },
+            {
+              "field": "day_of_week",
+              "type": "nominal"
             }
+          ],
+          "x": {
+            "axis": {
+              "title": "Hour of Day"
+            },
+            "field": "hour",
+            "scale": {
+              "domain": [
+                0,
+                23
+              ]
+            },
+            "type": "quantitative"
+          },
+          "y": {
+            "axis": {
+              "title": "Number of Trips"
+            },
+            "field": "trips",
+            "type": "quantitative"
+          }
+        },
+        "name": "view_1"
+      },
+      {
+        "mark": {
+          "type": "circle",
+          "opacity": 0.5,
+          "size": 30
+        },
+        "encoding": {
+          "color": {
+            "field": "member_casual",
+            "scale": {
+              "domain": [
+                "member",
+                "casual"
+              ],
+              "range": [
+                "#4C78A8",
+                "#F58518"
+              ]
+            },
+            "title": "User Type",
+            "type": "nominal"
+          },
+          "opacity": {
+            "condition": {
+              "param": "param_1",
+              "value": 1
+            },
+            "value": 0.2
+          },
+          "tooltip": [
+            {
+              "field": "hour",
+              "type": "quantitative"
+            },
+            {
+              "field": "trips",
+              "type": "quantitative"
+            },
+            {
+              "field": "member_casual",
+              "type": "nominal"
+            },
+            {
+              "field": "day_of_week",
+              "type": "nominal"
+            }
+          ],
+          "x": {
+            "axis": {
+              "title": "Hour of Day"
+            },
+            "field": "hour",
+            "scale": {
+              "domain": [
+                0,
+                23
+              ]
+            },
+            "type": "quantitative"
+          },
+          "y": {
+            "axis": {
+              "title": "Number of Trips"
+            },
+            "field": "trips",
+            "type": "quantitative"
           }
         }
-      ],
-      "height": 300,
-      "width": 140
-    },
-    "padding": {
-      "left": 50,
-      "right": 50,
-      "top": 50,
-      "bottom": 50
-    },
-    "params": [
-      {
-        "name": "param_1",
-        "select": {
-          "type": "point",
-          "fields": [
-            "member_casual"
-          ]
-        },
-        "views": [
-          "view_1"
-        ]
       }
     ],
-    "title": {
-      "text": "Hourly Trip Distribution by Day and User Type",
-      "anchor": "middle",
-      "color": "#333333",
-      "dy": 10,
-      "fontSize": 20,
-      "fontWeight": "normal"
-    },
+    "height": 300,
+    "width": 140
+  },
+  "padding": {
+    "left": 50,
+    "right": 50,
+    "top": 50,
+    "bottom": 50
+  },
+  "params": [
+    {
+      "name": "param_1",
+      "select": {
+        "type": "point",
+        "fields": [
+          "member_casual"
+        ]
+      },
+      "views": [
+        "view_1"
+      ]
+    }
+  ],
+  "title": {
+    "text": "Hourly Trip Distribution by Day and User Type",
+    "anchor": "middle",
+    "color": "#333333",
+    "dy": 10,
+    "fontSize": 20,
+    "fontWeight": "normal"
+  },
     "$schema": "https://vega.github.io/schema/vega-lite/v5.20.1.json",
     "datasets": {
       "data-a647ef730115f34ef8a549bc13b0ef14": [
