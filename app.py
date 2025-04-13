@@ -248,7 +248,7 @@ def generate_visualizations(df):
         )
     )
 
-    route_counts = df.groupby(['start_station_name', 'end_station_name'])['duration_minutes'].agg(['count', 'mean']).reset_index()
+    route_counts = df.groupby(['start_station_name', 'end_station_name']).size().reset_index(name='count')
     top_routes = route_counts.nlargest(10, 'count')
     
     top_routes['start_station_name'] = top_routes['start_station_name'].apply(clean_station_name)
@@ -261,9 +261,9 @@ def generate_visualizations(df):
         y='route',
         orientation='h',
         title='Most Popular Bike Routes',
-        labels={'count': 'Number of Trips', 'route': 'Route', 'mean': 'Average Duration (min)'},
-        color='mean',
-        color_continuous_scale='Viridis'
+        labels={'count': 'Number of Trips', 'route': 'Route'},
+        color='count',
+        color_continuous_scale=['#cfe8fc', '#1e88e5']
     )
     routes_bar.update_layout(
         xaxis=dict(
@@ -274,7 +274,8 @@ def generate_visualizations(df):
             constrain='domain',
             scaleanchor=None,
             autorange='reversed'
-        )
+        ),
+        coloraxis_showscale=False
     )
 
     d3_station_data = generate_d3_station_data(df)
