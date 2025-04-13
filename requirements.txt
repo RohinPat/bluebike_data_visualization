@@ -1,3 +1,9 @@
 flask==3.0.2
 pandas==2.2.1
-plotly==5.19.0 
+plotly==5.19.0
+numpy==1.26.4
+scipy==1.12.0
+matplotlib==3.8.3
+vega==5.0.0
+vega-lite==5.0.0
+vega-embed==6.0.0 
